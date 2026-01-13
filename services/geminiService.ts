@@ -2,6 +2,8 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Expense } from "../types";
 
+// Helper to get a fresh instance of the Gemini client using the environment's API key.
+// Follows guideline: Create a new GoogleGenAI instance right before making an API call.
 const getAI = () => {
   const apiKey = process.env.API_KEY;
   if (!apiKey) {
@@ -10,6 +12,7 @@ const getAI = () => {
   return new GoogleGenAI({ apiKey });
 };
 
+// Parses expense information from a natural language text string.
 export const parseExpenseFromText = async (text: string): Promise<Partial<Expense>> => {
   try {
     const ai = getAI();
@@ -34,6 +37,7 @@ export const parseExpenseFromText = async (text: string): Promise<Partial<Expens
       }
     });
 
+    // Access .text property directly as per guidelines.
     return JSON.parse(response.text || '{}');
   } catch (e) {
     console.error("AI Parsing error:", e);
@@ -41,6 +45,7 @@ export const parseExpenseFromText = async (text: string): Promise<Partial<Expens
   }
 };
 
+// Provides personalized budget insights and financial advice based on a list of expenses.
 export const getBudgetInsights = async (expenses: Expense[]): Promise<string> => {
   if (expenses.length === 0) return "Hozircha ma'lumotlar yo'q.";
 
@@ -58,7 +63,8 @@ export const getBudgetInsights = async (expenses: Expense[]): Promise<string> =>
     Menga qisqa (3-4 ta gap), tushunarli va foydali moliya maslahati ber. O'zbek tilida javob ber.`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      // Upgraded to gemini-3-pro-preview for complex reasoning/analysis as per guidelines.
+      model: 'gemini-3-pro-preview',
       contents: prompt,
       config: { temperature: 0.7 }
     });
@@ -69,15 +75,19 @@ export const getBudgetInsights = async (expenses: Expense[]): Promise<string> =>
   }
 };
 
+// Analyzes a receipt image to extract transaction details.
 export const analyzeReceipt = async (base64Image: string): Promise<Partial<Expense>> => {
   try {
     const ai = getAI();
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: [
-        { inlineData: { mimeType: "image/jpeg", data: base64Image } },
-        { text: "Ushbu chekdan summa va harajat turini aniqla. JSON qaytar." }
-      ],
+      // Correct multi-part content structure as per guidelines.
+      contents: {
+        parts: [
+          { inlineData: { mimeType: "image/jpeg", data: base64Image } },
+          { text: "Ushbu chekdan summa va harajat turini aniqla. JSON qaytar." }
+        ]
+      },
       config: {
         responseMimeType: "application/json",
         responseSchema: {
