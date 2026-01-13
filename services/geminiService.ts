@@ -1,10 +1,17 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { Expense, Category } from "../types";
+import { Expense } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Helper to get AI instance safely
+const getAI = () => {
+  if (!process.env.API_KEY) {
+    throw new Error("API_KEY is missing in environment variables.");
+  }
+  return new GoogleGenAI({ apiKey: process.env.API_KEY });
+};
 
 export const parseExpenseFromText = async (text: string): Promise<Partial<Expense>> => {
+  const ai = getAI();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
     contents: `Quyidagi matndan harajat ma'lumotlarini ajratib ol: "${text}". Valyuta har doim so'm (UZS) deb hisoblansin.`,
@@ -27,7 +34,7 @@ export const parseExpenseFromText = async (text: string): Promise<Partial<Expens
   });
 
   try {
-    return JSON.parse(response.text);
+    return JSON.parse(response.text || '{}');
   } catch (e) {
     console.error("JSON parsing error:", e);
     return {};
@@ -37,6 +44,7 @@ export const parseExpenseFromText = async (text: string): Promise<Partial<Expens
 export const getBudgetInsights = async (expenses: Expense[]): Promise<string> => {
   if (expenses.length === 0) return "Hozircha ma'lumotlar yo'q. Harajatlaringizni kiriting va men tahlil qilaman.";
 
+  const ai = getAI();
   const total = expenses.reduce((sum, e) => sum + e.amount, 0);
   const byCategory = expenses.reduce((acc, e) => {
     acc[e.category] = (acc[e.category] || 0) + e.amount;
@@ -46,7 +54,7 @@ export const getBudgetInsights = async (expenses: Expense[]): Promise<string> =>
   const prompt = `Men harajatlarimni nazorat qilyapman. Mana mening bu oydagi harajatlarim:
   Umumiy: ${total} so'm.
   Kategoriyalar bo'yicha: ${JSON.stringify(byCategory)}.
-  Menga qisqa, tushunarli va foydali maslahat ber. Qayerda tejashim mumkin? Uzbek tilida javob ber. Markdown formatida bo'lsin.`;
+  Menga qisqa (3-4 ta gap), tushunarli va foydali moliya maslahati ber. Qayerda tejashim mumkinligini ayt. O'zbek tilida javob ber. Markdown ishlatma, faqat oddiy matn.`;
 
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
@@ -60,6 +68,7 @@ export const getBudgetInsights = async (expenses: Expense[]): Promise<string> =>
 };
 
 export const analyzeReceipt = async (base64Image: string): Promise<Partial<Expense>> => {
+  const ai = getAI();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
     contents: [
@@ -70,7 +79,7 @@ export const analyzeReceipt = async (base64Image: string): Promise<Partial<Expen
         }
       },
       {
-        text: "Ushbu chekdan umumiy summa va harajat turini aniqla. JSON formatida qaytar."
+        text: "Ushbu chekdan umumiy summa va harajat turini aniqla. O'zbek tilida JSON formatida qaytar."
       }
     ],
     config: {
@@ -87,7 +96,7 @@ export const analyzeReceipt = async (base64Image: string): Promise<Partial<Expen
   });
 
   try {
-    return JSON.parse(response.text);
+    return JSON.parse(response.text || '{}');
   } catch (e) {
     return {};
   }
