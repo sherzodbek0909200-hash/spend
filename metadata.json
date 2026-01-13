@@ -1,0 +1,7 @@
+{
+  "name": "ExpenseAI - Shaxsiy Moliya Yordamchisi",
+  "description": "AI yordamida harajatlarni nazorat qilish, tahlil qilish va aqlli maslahatlar olish uchun mo'ljallangan ilova.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
